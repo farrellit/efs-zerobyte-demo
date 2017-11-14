@@ -10,6 +10,7 @@ implement a very tight write->queue->dequeue->read loop to demonstrate lack of E
 ## Before you launch
 * change the KeyPair for the instances.  Should be optional or configurable but isn't, sorry.
 * install the golang deps from readwrite.go (it's just redis)
+* ecr repo should be created by default but isn't
 
 ## Launching
 
