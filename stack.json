@@ -276,7 +276,7 @@
                                     "#yum update -y",
                                     "yum install -y docker nfs-utils",
                                     "mkdir -p /efs",
-                                    { "Fn::Sub": "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${EFS}.efs.us-east-1.amazonaws.com:/ /efs" },
+                                    { "Fn::Sub": "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${EFS}.efs.${AWS::Region}.amazonaws.com:/ /efs" },
                                     "gpasswd -a ec2-user docker",
                                     "fallocate  -l 1G /swap", 
                                     "mkswap /swap", 
@@ -285,11 +285,9 @@
                                     "swapon -s",
                                     "eval `aws ecr get-login --region us-east-1 --no-include-email`",
                                     "export INSTANCE_ID=\"`curl 169.254.169.254/latest/meta-data/instance-id`\"",
-                                    "for i in `seq 1 6`; do ", 
                                     { "Fn::Sub": 
-                                      "docker run -d --restart=always -e REDIS_SERVER=${RedisInstance.PrivateIp} --log-opt tag=\"readwrite/$INSTANCE_ID/{{.ID}}\" --log-driver=awslogs --log-opt awslogs-region=${AWS::Region} --log-opt awslogs-group=${Logs} -v /efs/:/efs --workdir=/efs 097202842911.dkr.ecr.us-east-1.amazonaws.com/efs-testing/readwrite:latest /efs"
+                                      "docker run -d --restart=always -e REDIS_SERVER=${RedisInstance.PrivateIp} --log-opt tag=\"readwrite/$INSTANCE_ID/{{.ID}}\" --log-driver=awslogs --log-opt awslogs-region=${AWS::Region} --log-opt awslogs-group=${Logs} -v /efs/:/efs --workdir=/efs ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/efs-testing/readwrite:latest /efs"
                                     } ,
-                                    "done",
                                     "finish 0",
                                     "trap - EXIT"
                                 ]
