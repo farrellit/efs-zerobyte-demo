@@ -1,0 +1,367 @@
+{
+      "Parameters": { 
+        "VPC": { "Type": "AWS::EC2::VPC::Id", "Default": "vpc-2823f84d" },
+        "Subnets": { "Type": "List<AWS::EC2::Subnet::Id>", "Default": "subnet-a7791a9d,subnet-c7a036cb,subnet-4e147e2b,subnet-e08e7597,subnet-80f81dd9,subnet-1ccdc834" }
+      },
+        "Resources": {
+            "SGSelfIngress": {
+                "Type": "AWS::EC2::SecurityGroupIngress", 
+                "Properties": {
+                    "SourceSecurityGroupId": {
+                        "Ref": "SG"
+                    }, 
+                    "IpProtocol": "-1", 
+                    "GroupId": {
+                        "Ref": "SG"
+                    }
+                }
+            }, 
+            "EFS": {
+                "Type": "AWS::EFS::FileSystem", 
+                "Properties": {
+                    "PerformanceMode": "maxIO", 
+                    "Encrypted": false, 
+                    "FileSystemTags": [
+                        {
+                            "Value": "dfarrell@spscommerce.com", 
+                            "Key": "sps:owner"
+                        }, 
+                        {
+                            "Value": "techops", 
+                            "Key": "sps:unit"
+                        }, 
+                        {
+                            "Value": "cloud-engineering", 
+                            "Key": "sps:product"
+                        },
+                        {
+                            "Value": "efs-testing", 
+                            "Key": "sps:subproduct"
+                        }, 
+                        {
+                            "Value": "test efs stuffs somewhere safe", 
+                            "Key": "sps:purpose"
+                        }
+                    ]
+                }
+            }, 
+            "SG": {
+                "Type": "AWS::EC2::SecurityGroup", 
+                "Properties": {
+                    "VpcId": { "Ref": "VPC" }, 
+                    "GroupDescription": "Allow connectivity to filesystem and redis nodes", 
+                    "Tags": [
+                        {
+                            "Value": "efs-testing", 
+                            "Key": "sps:subproduct"
+                        }, 
+                        {
+                            "Value": "dfarrell@spscommerce.com", 
+                            "Key": "sps:owner"
+                        }, 
+                        {
+                            "Value": "techops", 
+                            "Key": "sps:unit"
+                        }, 
+                        {
+                            "Value": "cloud-engineering", 
+                            "Key": "sps:product"
+                        }, 
+                        {
+                            "Value": "test efs stuffs somewhere safe", 
+                            "Key": "sps:purpose"
+                        }
+                    ]
+                }
+            }, 
+            "MountTarget0": {
+              "Type" : "AWS::EFS::MountTarget",
+              "Properties" : {
+                "FileSystemId" : {"Ref": "EFS"},
+                "SecurityGroups" : [ {"Ref": "SG"} ],
+                "SubnetId" : { "Fn::Select": [ 0, {"Ref": "Subnets"} ] }
+              }
+            },
+            "MountTarget1": {
+              "Type" : "AWS::EFS::MountTarget",
+              "Properties" : {
+                "FileSystemId" : {"Ref": "EFS"},
+                "SecurityGroups" : [ {"Ref": "SG"} ],
+                "SubnetId" : { "Fn::Select": [ 1, {"Ref": "Subnets"} ] }
+              }
+            },
+            "MountTarget2": {
+              "Type" : "AWS::EFS::MountTarget",
+              "Properties" : {
+                "FileSystemId" : {"Ref": "EFS"},
+                "SecurityGroups" : [ {"Ref": "SG"} ],
+                "SubnetId" : { "Fn::Select": [ 2, {"Ref": "Subnets"} ] }
+              }
+            },
+            "MountTarget3": {
+              "Type" : "AWS::EFS::MountTarget",
+              "Properties" : {
+                "FileSystemId" : {"Ref": "EFS"},
+                "SecurityGroups" : [ {"Ref": "SG"} ],
+                "SubnetId" : { "Fn::Select": [ 3, {"Ref": "Subnets"} ] }
+              }
+            },
+            "MountTarget4": {
+              "Type" : "AWS::EFS::MountTarget",
+              "Properties" : {
+                "FileSystemId" : {"Ref": "EFS"},
+                "SecurityGroups" : [ {"Ref": "SG"} ],
+                "SubnetId" : { "Fn::Select": [ 4, {"Ref": "Subnets"} ] }
+              }
+            },
+            "MountTarget5": {
+              "Type" : "AWS::EFS::MountTarget",
+              "Properties" : {
+                "FileSystemId" : {"Ref": "EFS"},
+                "SecurityGroups" : [ {"Ref": "SG"} ],
+                "SubnetId" : { "Fn::Select": [ 5, {"Ref": "Subnets"} ] }
+              }
+            },
+            "Logs": {
+              "Type" : "AWS::Logs::LogGroup",
+              "Properties" : {
+                "LogGroupName": "efs-testing-readwrite",
+                "RetentionInDays" : 7
+              }
+            },
+            "InstanceRole": {
+              "Properties": {
+                "AssumeRolePolicyDocument": {
+                  "Statement": [
+                    {
+                      "Action": [ "sts:AssumeRole" ],
+                      "Effect": "Allow",
+                      "Principal": { "Service": [ "ec2.amazonaws.com" ] }
+                    }
+                  ],
+                  "Version": "2012-10-17"
+                },
+                "Policies": 
+                [
+                  {
+                    "PolicyName": "efstestingPolicy",
+                    "PolicyDocument": {
+                      "Statement": [
+											{
+            						"Effect": "Allow",
+	 					            "Action": [
+                					"ecr:GetAuthorizationToken"
+            						],
+            						"Resource": "*"
+                      },
+											{
+            						"Effect": "Allow",
+	 					            "Action": [
+            				    	  "ecr:BatchCheckLayerAvailability",
+                					  "ecr:BatchGetImage",
+                					  "ecr:GetDownloadUrlForLayer"
+            						],
+            						"Resource": [
+                          { "Fn::Sub": "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/efs-testing/readwrite" }
+                        ]
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Resource": "*",
+                          "Action": "cloudwatch:PutMetricData"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "logs:CreateLogStream",
+                              "logs:PutLogEvents",
+                              "logs:DescribeLogStreams"
+                          ],
+                            "Resource": [
+                              { "Fn::GetAtt": [ "Logs", "Arn" ] }
+                          ]
+                      }
+                    ],
+                    "Version": "2012-10-17"
+                  }
+                }
+              ]
+          },
+          "Type": "AWS::IAM::Role"
+        },
+        "InstanceProfile": {
+          "Properties": {
+            "Roles": [ { "Ref": "InstanceRole" } ]
+          },
+          "Type": "AWS::IAM::InstanceProfile"
+        },
+        "RedisInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "KeyName": "dfarrell",
+        "ImageId": "ami-8c1be5f6",
+        "SubnetId":  { "Fn::Select": [ 0, {"Ref": "Subnets"} ] },
+        "SecurityGroupIds": [
+          { "Ref": "SG" },
+          "sg-bb88fade"
+        ], 
+        "IamInstanceProfile": { "Ref": "InstanceProfile" },            
+        "InstanceType": "r4.large",
+        "UserData": {
+                        "Fn::Base64": {
+                            "Fn::Join": [
+                                "\n", 
+                                [
+                                    "#!/bin/bash -ex", 
+                                    {
+                                        "Fn::Join": [
+                                            "\n", 
+                                            [
+                                                "function finish {", 
+                                                "exit_code=${1:-1};", 
+                                                {
+                                                    "Fn::Sub": "/opt/aws/bin/cfn-signal -e $exit_code --stack ${AWS::StackName} --region ${AWS::Region} --resource RedisInstance;"
+                                                }, 
+                                                "}"
+                                            ]
+                                        ]
+                                    }, 
+                                    "trap finish EXIT",
+                                    "yum update -y",
+                                    "yum install -y docker",
+                                    "gpasswd -a ec2-user docker",
+                                    "fallocate  -l 1G /swap", 
+                                    "mkswap /swap", 
+                                    "service docker start",
+                                    "echo \"/swap\tswap\tswap\tdefaults\t0 0\" >> /etc/fstab",
+                                    "swapon -s",
+                                    "mkdir -p /redis-data",
+                                    "export INSTANCE_ID=\"`curl 169.254.169.254/latest/meta-data/instance-id`\"",
+                                    { "Fn::Sub": "docker run -d --restart=always --log-opt tag=\"redis/$INSTANCE_ID/{{.ID}}\" --network=host --log-driver=awslogs --log-opt awslogs-region=${AWS::Region} --log-opt awslogs-group=${Logs} -p 0.0.0.0:6379:6379 -v /redis-data:/data redis" } ,
+                                    "finish 0",
+                                    "trap - EXIT"
+                                ]
+                            ]
+                        }
+                    },
+        "Tags": [
+        ]
+      }
+    },
+    "ReadWritersLaunchConfig": {
+                "DependsOn": [ "MountTarget0", "MountTarget1", "MountTarget2", "MountTarget3", "MountTarget4", "MountTarget5"],
+                "Type": "AWS::AutoScaling::LaunchConfiguration", 
+                "Properties": {
+                    "IamInstanceProfile": { "Ref": "InstanceProfile" },
+                    "UserData": {
+                        "Fn::Base64": {
+                            "Fn::Join": [
+                                "\n", 
+                                [
+                                    "#!/bin/bash -ex", 
+                                    {
+                                        "Fn::Join": [
+                                            "\n", 
+                                            [
+                                                "function finish {", 
+                                                "exit_code=${1:-1};", 
+                                                {
+                                                    "Fn::Sub": "/opt/aws/bin/cfn-signal -e $exit_code --stack ${AWS::StackName} --region ${AWS::Region} --resource ReadWriters ;"
+                                                }, 
+                                                "}"
+                                            ]
+                                        ]
+                                    }, 
+                                    "trap finish EXIT",
+                                    "#yum update -y",
+                                    "yum install -y docker nfs-utils",
+                                    "mkdir -p /efs",
+                                    { "Fn::Sub": "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${EFS}.efs.us-east-1.amazonaws.com:/ /efs" },
+                                    "gpasswd -a ec2-user docker",
+                                    "fallocate  -l 1G /swap", 
+                                    "mkswap /swap", 
+                                    "service docker start",
+                                    "echo \"/swap\tswap\tswap\tdefaults\t0 0\" >> /etc/fstab",
+                                    "swapon -s",
+                                    "eval `aws ecr get-login --region us-east-1 --no-include-email`",
+                                    "export INSTANCE_ID=\"`curl 169.254.169.254/latest/meta-data/instance-id`\"",
+                                    "for i in `seq 1 6`; do ", 
+                                    { "Fn::Sub": 
+                                      "docker run -d --restart=always -e REDIS_SERVER=${RedisInstance.PrivateIp} --log-opt tag=\"readwrite/$INSTANCE_ID/{{.ID}}\" --log-driver=awslogs --log-opt awslogs-region=${AWS::Region} --log-opt awslogs-group=${Logs} -v /efs/:/efs --workdir=/efs 097202842911.dkr.ecr.us-east-1.amazonaws.com/efs-testing/readwrite:latest /efs"
+                                    } ,
+                                    "done",
+                                    "finish 0",
+                                    "trap - EXIT"
+                                ]
+                            ]
+                        }
+                    }, 
+                    "KeyName": "dfarrell", 
+                    "SecurityGroups": [
+                        {
+                            "Ref": "SG"
+                        }
+                    ], 
+                    "InstanceType": "t2.micro", 
+                    "ImageId": "ami-8c1be5f6"
+                }
+            }, 
+            "ReadWriters": {
+                "Type": "AWS::AutoScaling::AutoScalingGroup", 
+                "Properties": {
+                    "DesiredCapacity": "1", 
+                    "Tags": [
+                        {
+                            "PropagateAtLaunch": true, 
+                            "Value": "dfarrell@spscommerce.com", 
+                            "Key": "sps:owner"
+                        }, 
+                        {
+                            "PropagateAtLaunch": true, 
+                            "Value": "techops", 
+                            "Key": "sps:unit"
+                        }, 
+                        {
+                            "PropagateAtLaunch": true, 
+                            "Value": "cloud-engineering", 
+                            "Key": "sps:product"
+                        }, 
+                        {
+                            "PropagateAtLaunch": true, 
+                            "Value": "efs-testing", 
+                            "Key": "sps:subproduct"
+                        }, 
+                        {
+                            "PropagateAtLaunch": true, 
+                            "Value": "test efs stuffs somewhere safe", 
+                            "Key": "sps:purpose"
+                        }
+                    ], 
+                    "VPCZoneIdentifier": {"Ref": "Subnets"}, 
+                    "MinSize": "1", 
+                    "MaxSize": "100", 
+                    "Cooldown": "90", 
+                    "LaunchConfigurationName": {
+                        "Ref": "ReadWritersLaunchConfig"
+                    }, 
+                    "HealthCheckGracePeriod": "90", 
+                    "HealthCheckType": "EC2"
+                }, 
+                "UpdatePolicy": {
+                    "AutoScalingRollingUpdate": {
+                        "PauseTime": "PT7M", 
+                        "WaitOnResourceSignals": true, 
+                        "SuspendProcesses": [
+                            "HealthCheck", 
+                            "ReplaceUnhealthy", 
+                            "AZRebalance", 
+                            "AlarmNotification", 
+                            "ScheduledActions"
+                        ], 
+                        "MaxBatchSize": 1, 
+                        "MinInstancesInService": 1
+                    }
+                }
+      }
+    }
+}
