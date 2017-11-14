@@ -12,10 +12,10 @@ func main() {
   var base string
   done := make(chan int, 0)
   var sync bool
-  if os.Getenv("NOSYNC") == "" {
-    sync = true
-  } else {
+  if os.Getenv("SYNC") == "" {
     sync = false
+  } else {
+    sync = true
   }
   server := os.Getenv("REDIS_SERVER")
   if server == "" {

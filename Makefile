@@ -20,4 +20,4 @@ push:
 stackonly:
 	python -mjson.tool stack.json >/dev/null
 	docker run --rm -it -v `pwd`:/code farrellit/awscli --region us-east-1 cloudformation validate-template --template-body file:///code/stack.json 
-	docker run -e AWS_DEFAULT_REGION=us-east-1 --rm -it -v `pwd`:/code --entrypoint bash farrellit/awscli -c 'aws cloudformation describe-stacks --stack-name efs-testing-readwrite; if [ $$? == 0 ]; then action=update-stack; else action=create-stack; fi; aws cloudformation $$action --template-body file:///code/stack.json --stack-name efs-testing-readwrite --region us-east-1 --capabilities CAPABILITY_IAM'
+	docker run -e AWS_DEFAULT_REGION=us-east-1 --rm -it -v `pwd`:/code --entrypoint bash farrellit/awscli /code/stack.sh
