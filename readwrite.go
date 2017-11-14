@@ -40,15 +40,17 @@ func main() {
       l, err := rclient.LLen("fileq").Result()
       if err != nil {
         fmt.Fprintf(os.Stderr, "Couldn't check length of queue to throttle writes: %s\n", err)
-        i-- // retry
         continue
+      } else {
+        //fmt.Fprintf(os.Stderr, "Length of queue is %d\n", l)
       }
       if l > 1000 { // don't write too much, it just gobs things up
-        time.Sleep( 5 * time.Second )
-        i-- // retry
+        time.Sleep( 10 * time.Second )
+        i--;
         continue
       }
       doWrite(base, rclient, "fileq", sync);
+      //fmt.Fprintf(os.Stderr, "doWrite done for this pass(%d/%d)\n", i,passes)
     }
     done <- 1
   }()
@@ -66,6 +68,7 @@ func main() {
   _ = <-done
   fmt.Fprintln(os.Stderr, "Exiting normally")
 }
+
 func doWrite(base string, rclient *redis.Client, qkey string, sync bool) {
     fname := fmt.Sprintf("%s/%d.%d", base, rand.Uint64(), rand.Uint64() )
     f, err := os.Create(fname)
@@ -85,16 +88,21 @@ func doWrite(base string, rclient *redis.Client, qkey string, sync bool) {
     if sync {
       if err = f.Sync(); err != nil {
         fmt.Fprintf(os.Stderr, "Failed to sync %s: %s\n", fname, err );
+        f.Close()
+        return
       }
     }
     f.Close()
-    rclient.LPush(qkey, fname)
+    //fmt.Fprintf(os.Stderr, "Wrote %s and closed.\n", fname)
+    _, err = rclient.LPush(qkey, fname).Result()
+    if err != nil {
+      fmt.Fprintf(os.Stderr, "Failed to queue %s: %s\n", fname ,err)
+    }
+    //fmt.Fprintf(os.Stderr, "Queued %s\n", fname)
 }
 
-func doRead(rclient *redis.Client, qkey string, timeout int) bool {
-    // todo: remove this, its just for testing
-    time.Sleep(1)
-    res, err := rclient.BRPop(time.Duration(1 * time.Second), qkey).Result()
+func doRead(rclient *redis.Client, qkey string, timeout int64) bool {
+    res, err := rclient.BRPop(time.Duration(timeout * int64(time.Second)), qkey).Result()
     if err != nil {
       fmt.Fprintf(os.Stderr, "Read: failed to pop from queue %s: %s\n", qkey, err)
       return false
