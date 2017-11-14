@@ -6,6 +6,7 @@ import (
  "math/rand"
  "github.com/go-redis/redis"
  "strconv"
+ "time"
 )
 
 func main() {
@@ -31,11 +32,22 @@ func main() {
   if len(os.Args) > 1 {
     base = os.Args[1]
   } else {
-    base = "efs/"
+    base = "efs"
   }
   go func(){
     rclient := redis.NewClient(&redis.Options{Addr: fmt.Sprintf("%s:6379", server), Password: "", DB: 1})
     for i := 0; passes == 0 || i < passes; i++ {
+      l, err := rclient.LLen("fileq").Result()
+      if err != nil {
+        fmt.Fprintf(os.Stderr, "Couldn't check length of queue to throttle writes: %s\n", err)
+        i-- // retry
+        continue
+      }
+      if l > 1000 { // don't write too much, it just gobs things up
+        time.Sleep( 5 * time.Second )
+        i-- // retry
+        continue
+      }
       doWrite(base, rclient, "fileq", sync);
     }
     done <- 1
@@ -43,8 +55,10 @@ func main() {
   go func(){
     rclient := redis.NewClient(&redis.Options{Addr: fmt.Sprintf("%s:6379", server), Password: "", DB: 1})
     for i := 0; passes == 0 || i < passes; i++ {
-      doRead(rclient, "fileq");
+      doRead(rclient, "fileq", 0);
     }
+    // drain the queue 
+    for ; doRead(rclient, "fileq", 1) == true; { }
     done <- 1
   }()
   // wait for reader and writer
@@ -53,7 +67,7 @@ func main() {
   fmt.Fprintln(os.Stderr, "Exiting normally")
 }
 func doWrite(base string, rclient *redis.Client, qkey string, sync bool) {
-    fname := fmt.Sprintf("%s/%d", base, rand.Uint64())
+    fname := fmt.Sprintf("%s/%d.%d", base, rand.Uint64(), rand.Uint64() )
     f, err := os.Create(fname)
     if err != nil {
       fmt.Fprintf(os.Stderr, "Failed to create %s: %s\n", fname, err)
@@ -69,30 +83,33 @@ func doWrite(base string, rclient *redis.Client, qkey string, sync bool) {
     rclient.LPush(qkey, fname)
 }
 
-func doRead(rclient *redis.Client, qkey string) {
-    res, err := rclient.BRPop(0, qkey).Result()
+func doRead(rclient *redis.Client, qkey string, timeout int) bool {
+    // todo: remove this, its just for testing
+    time.Sleep(1)
+    res, err := rclient.BRPop(time.Duration(1 * time.Second), qkey).Result()
     if err != nil {
       fmt.Fprintf(os.Stderr, "Read: failed to pop from queue %s: %s\n", qkey, err)
-      return
+      return false
     }
     fname := res[1]
     f, err := os.Open(fname)
     if err != nil {
       fmt.Fprintf(os.Stderr, "Read: Failed to open %s: %s\n", fname, err)
-      return
+      return true
     }
 		b := make([]byte, 1)
     num, err := f.Read(b)
 		if err != nil {
       fmt.Fprintf(os.Stderr, "Read: Failed to read from %s: %s\n", fname, err)
       f.Close()
-      return
+      return true
 		}
 		if num == 0 {
-			fmt.Fprintf(os.Stderr, "Zero byte file! %s\n", fname)
+			fmt.Fprintf(os.Stderr, "Zero byte file! %s\n", fname) // actually, we get an EOF error.
       f.Close()
-      return
+      return true
 		}
-    os.Remove(fname)
     f.Close()
+    os.Remove(fname)
+    return true
 }

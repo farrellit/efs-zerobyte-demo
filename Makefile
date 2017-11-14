@@ -12,9 +12,9 @@ build:
 	GOOS=linux GOARCH=amd64 go build readwrite.go
 	docker build -t readwrite -f Dockerfile.readwrite .
 
-push:
+push: build
 	eval "`docker run --rm farrellit/awscli ecr get-login --no-include-email --region us-east-1`";
-	acct=`docker run --rm -it -v `pwd`:/code farrellit/awscli --region us-east-1 sts get-caller-identity --query Account --output text`; docker tag readwrite:latest $$acct.dkr.ecr.us-east-1.amazonaws.com/efs-testing/readwrite:latest; docker push $$acct.dkr.ecr.us-east-1.amazonaws.com/efs-testing/readwrite:latest
+	acct=$$(docker run --rm farrellit/awscli --region us-east-1 sts get-caller-identity --query Account --output text); docker tag readwrite:latest $$acct.dkr.ecr.us-east-1.amazonaws.com/efs-testing/readwrite:latest; docker push $$acct.dkr.ecr.us-east-1.amazonaws.com/efs-testing/readwrite:latest
 
 stackonly:
 	which python && -mjson.tool stack.json >/dev/null # opportunisticlaly check json syntax before a round trip to the cfn api
