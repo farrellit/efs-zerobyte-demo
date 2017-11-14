@@ -73,7 +73,15 @@ func doWrite(base string, rclient *redis.Client, qkey string, sync bool) {
       fmt.Fprintf(os.Stderr, "Failed to create %s: %s\n", fname, err)
       return
     }
-    f.WriteString(fname)
+    n, err := f.WriteString(fname)
+    if err != nil {
+      fmt.Fprintf(os.Stderr, "Failed to create/write %s: %s\n", fname, err)
+      return
+    } else {
+      if n != len(fname) {
+        fmt.Fprintf(os.Stderr, "Warning, the data written to %s seems not what was expected.  Thought it would be %d but it was %d\n", fname, len(fname), n )
+      }
+    }
     if sync {
       if err = f.Sync(); err != nil {
         fmt.Fprintf(os.Stderr, "Failed to sync %s: %s\n", fname, err );
