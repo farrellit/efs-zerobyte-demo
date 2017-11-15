@@ -25,3 +25,9 @@ At significant numbers of processor nodes, `No Such File or Directory` errors ar
 `EOF` Error indicates the program got EOF when it read the file - since the file ins't queued until _after_ the Close() happens, this would indicate lack of read after write consistency on unsynced files on `async` (the default) mount points.  This is not unexpected, based on the contents of the `nfs` manual page details regarding `sync` vs `async` mounts, but the coconverstaion thus far has been somewhat unclear on that point.
 
 Other errors are not anticipated and have not yet been seen.
+
+## Interesting Links
+
+https://serverfault.com/questions/638601/nfs-caching-issue
+
+https://linux.die.net/man/5/nfs
