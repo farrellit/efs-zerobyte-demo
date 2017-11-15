@@ -19,4 +19,4 @@ push: build
 stackonly:
 	which python && python -mjson.tool stack.json >/dev/null # opportunisticlaly check json syntax before a round trip to the cfn api
 	docker run --rm -it -v `pwd`:/code farrellit/awscli --region us-east-1 cloudformation validate-template --template-body file:///code/stack.json 
-	docker run -e AWS_DEFAULT_REGION=us-east-1 --rm -it -v `pwd`:/code --entrypoint bash farrellit/awscli /code/stack.sh
+	docker run -e AWS_DEFAULT_REGION=us-east-1 --rm -it -v `pwd`:/code --entrypoint bash farrellit/awscli /code/do-stack.sh

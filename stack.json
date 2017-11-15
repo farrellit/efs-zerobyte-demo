@@ -276,7 +276,7 @@
                                     "#yum update -y",
                                     "yum install -y docker nfs-utils",
                                     "mkdir -p /efs",
-                                    { "Fn::Sub": "mount -t nfs4 -o sync,nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${EFS}.efs.${AWS::Region}.amazonaws.com:/ /efs" },
+                                    { "Fn::Sub": "mount -t nfs4 -o async,nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${EFS}.efs.${AWS::Region}.amazonaws.com:/ /efs" },
                                     "gpasswd -a ec2-user docker",
                                     "fallocate  -l 1G /swap", 
                                     "mkswap /swap", 
