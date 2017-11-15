@@ -20,6 +20,8 @@ implement a very tight write->queue->dequeue->read loop to demonstrate lack of E
 
 check the output in the CloudWatch Logs group, which will be created with the stack.  It's typically pretty quiet except for errors.
 
-EOF Error indicates the program got EOF when it read the file - since the file ins't queued until the Close() happens, this would indicate lack of read after write consistency on unsynced files on `async` (the default) mount points.
+At significant numbers of processor nodes, `No Such File or Directory` errors are common - I _believe_ they are the effect of directory caching, but I haven't had a chance to asses that yet.  
 
-Other errors are not anticipated.
+`EOF` Error indicates the program got EOF when it read the file - since the file ins't queued until _after_ the Close() happens, this would indicate lack of read after write consistency on unsynced files on `async` (the default) mount points.  This is not unexpected, based on the contents of the `nfs` manual page details regarding `sync` vs `async` mounts, but the coconverstaion thus far has been somewhat unclear on that point.
+
+Other errors are not anticipated and have not yet been seen.
